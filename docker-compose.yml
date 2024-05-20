@@ -8,8 +8,6 @@
     productapi:
       container_name: product-api
       image: productapi
-      ports:
-        - 5030:80
       depends_on:
         - productdb
       environment:
@@ -43,8 +41,6 @@
     orderapi:
       container_name: order-api
       image: orderapi
-      ports:
-        - 5138:80
       environment:
        - ServiceBus__Uri=${RabbitmqUri}
        - ServiceBus__Username=${RabbitmqUser}
