@@ -1,0 +1,107 @@
+  version: '3.6'
+  networks:
+    backend:
+      driver: bridge
+
+  services:
+    #product
+    productapi:
+      container_name: product-api
+      image: productapi
+      ports:
+        - 5030:80
+      depends_on:
+        - productdb
+      environment:
+        - ServiceBus__Uri=${RabbitmqUri}
+        - ServiceBus__Username=${RabbitmqUser}
+        - ServiceBus__Password=${RabbitmqPassword}
+        - ASPNETCORE_URLS=${AspnetCoreUrl}
+        - ConnectionStrings__DefaultConnection=${POSTGRES}
+      build:
+        context: .
+        dockerfile: src/services/ProductService/Dockerfile
+      networks:
+        - backend
+    #productdb
+    productdb:
+      container_name: product-db
+      image: postgres:16.3-alpine
+      restart: always
+      ports:
+        - 5432:5432
+      environment:
+          - POSTGRES_USER=${POSTGRES_USER}
+          - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+          - POSTGRES_DB= ${POSTGRES_DB}
+      networks:
+        - backend
+      volumes:
+        - dbproduct:/var/lib/postgresql/data/
+
+    #order
+    orderapi:
+      container_name: order-api
+      image: orderapi
+      ports:
+        - 5138:80
+      environment:
+       - ServiceBus__Uri=${RabbitmqUri}
+       - ServiceBus__Username=${RabbitmqUser}
+       - ServiceBus__Password=${RabbitmqPassword}
+       - ServiceBus__Queue=${RabbitmqQueue}
+       - ASPNETCORE_URLS=${AspnetCoreUrl}
+       - server=${server}
+       - database=${database}
+       - port=${port}
+       - user=${user}
+       - password=${password}
+      build:
+        context: .
+        dockerfile: src/services/OrderService/Dockerfile
+      depends_on:
+        - orderdb
+      networks:
+        - backend
+
+    orderdb:
+      container_name: order-db
+      image: mcr.microsoft.com/mssql/server:2019-latest
+      restart: always
+      environment:
+       - ACCEPT_EULA=Y
+       - SA_PASSWORD=${password}
+      ports:
+        - 1433:1433
+      networks:
+        - backend
+      volumes:
+        - dborder:/var/opt/mssql
+    #rabbitmq
+    rabbitmq:
+      image: rabbitmq:3-management
+      container_name: 'rabbitmq'
+      ports:
+        - 15672:15672
+        - 5672:5672
+      networks:
+        - backend
+    #apigateway
+    apigateway:
+      container_name: api-gateway
+      image: apigateway
+      ports:
+        - 8001:80
+      build:
+        context: .
+        dockerfile: src/ApiGateways/ApiGateway/Dockerfile
+      environment:
+       - ASPNETCORE_URLS=${AspnetCoreUrl}
+      networks:
+        - backend
+
+  volumes:
+    dbproduct:
+    dborder:
+
+
